@@ -1,0 +1,53 @@
+install.packages("MASS")
+# loading of necessary libraries 
+library(tidyverse)
+library(readr)
+library(janitor)
+library(ggplot2)
+library(WDI)
+library(nlme)
+library(lmerTest)
+library(performance)
+library(quantmod)
+library(forecast)
+
+# Predicting The price of Bharat Electronics Limited (BEL.NS)
+
+#Get the price data from Yahoo Finance 
+data <- getSymbols("BEL.NS", src = "yahoo", start = 2025-06-27)
+view(data)
+
+#closing prices of BEL
+prices <- Cl(BEL.NS)
+
+
+#converting in the prices into the time series 
+ts_prices <- ts(prices)
+
+#model 
+model <- auto.arima(ts_prices)
+summary(model)
+
+#forecast the prices 
+future <- forecast(model, h = 30)
+
+
+#create a data frame 
+last_day <- tail(index(prices),1)
+future_df30 <- data.frame(
+  date = seq(from = last_day + 3, by = "days", length.out = 30),
+  mean = as.numeric(future$mean),
+  lower = as.numeric(future$lower[,2]),
+  upper = as.numeric(future$upper[,2])
+)
+
+#graphical representation 
+ggplot(future_df30, aes(x = date)) + 
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.6, color = "darkblue") + 
+  geom_point(aes(y = mean), size = 1.4, color = "red") + 
+  labs(
+    title = "The Forecasted Price of BEL (for Next 30 days)",
+    x = "Date",
+    y = "Price(INR)"
+  ) + 
+  theme_minimal()
